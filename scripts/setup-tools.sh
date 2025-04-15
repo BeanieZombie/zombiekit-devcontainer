@@ -1,26 +1,54 @@
 #!/bin/bash
+     set -euo pipefail
+     IFS=$'\n\t'
 
-     # Install Bun (pin to a specific version)
+     echo "=== Installing Bun (v1.1.0) ==="
      BUN_VERSION="1.1.0"
-     curl -fsSL https://bun.sh/install | bash -s -- $BUN_VERSION
-     echo 'export PATH=$PATH:$HOME/.bun/bin' >> $HOME/.bashrc
-     export PATH=$PATH:$HOME/.bun/bin
+     curl -fsSL https://bun.sh/install | bash -s -- "$BUN_VERSION"
+     # Ensure Bun's bin is in PATH for future sessions and current shell
+     if ! grep -q '$HOME/.bun/bin' "$HOME/.bashrc"; then
+       echo 'export PATH=$PATH:$HOME/.bun/bin' >> "$HOME/.bashrc"
+     fi
+     export PATH=$PATH:"$HOME/.bun/bin"
 
-     # Install Foundry (pin to a specific version)
+     echo "=== Installing Foundry (v0.2.0) ==="
      curl -L https://foundry.paradigm.xyz | bash
-     $HOME/.foundry/bin/foundryup --version v0.2.0
-     echo 'export PATH=$PATH:$HOME/.foundry/bin' >> $HOME/.bashrc
-     export PATH=$PATH:$HOME/.foundry/bin
+     "$HOME/.foundry/bin/foundryup" --version v0.2.0
+     if ! grep -q '$HOME/.foundry/bin' "$HOME/.bashrc"; then
+       echo 'export PATH=$PATH:$HOME/.foundry/bin' >> "$HOME/.bashrc"
+     fi
+     export PATH=$PATH:"$HOME/.foundry/bin"
 
-     # Install sonicd and sonictool (already pinned to v2.0.1)
-     SONIC_DIR=$HOME/sonic
-     mkdir -p $SONIC_DIR
-     cd $SONIC_DIR
-     git clone https://github.com/0xsoniclabs/Sonic.git .
-     git fetch --tags && git checkout -b v2.0.1 tags/v2.0.1
+     echo "=== Cloning and building Sonic (v2.0.1) ==="
+     SONIC_DIR="$HOME/sonic"
+     mkdir -p "$SONIC_DIR"
+     cd "$SONIC_DIR"
+     # Only clone if the repository isn't already cloned
+     if [ ! -d ".git" ]; then
+       git clone https://github.com/0xsoniclabs/Sonic.git .
+     fi
+     git fetch --tags
+     git checkout -B v2.0.1 tags/v2.0.1
      make all
-     mkdir -p $HOME/bin
-     cp build/bin/sonicd $HOME/bin/
-     cp build/bin/sonictool $HOME/bin/
-     echo 'export PATH=$PATH:$HOME/bin' >> $HOME/.bashrc
-     export PATH=$PATH:$HOME/bin
+
+     echo "=== Copying binaries to \$HOME/bin ==="
+     mkdir -p "$HOME/bin"
+     # Use quotes and check if files exist before copying
+     if [ -f "build/bin/sonicd" ]; then
+       cp "build/bin/sonicd" "$HOME/bin/"
+     else
+       echo "Error: build/bin/sonicd not found." && exit 1
+     fi
+
+     if [ -f "build/bin/sonictool" ]; then
+       cp "build/bin/sonictool" "$HOME/bin/"
+     else
+       echo "Error: build/bin/sonictool not found." && exit 1
+     fi
+
+     if ! grep -q '$HOME/bin' "$HOME/.bashrc"; then
+       echo 'export PATH=$PATH:$HOME/bin' >> "$HOME/.bashrc"
+     fi
+     export PATH=$PATH:"$HOME/bin"
+
+     echo "=== Installation complete ==="
