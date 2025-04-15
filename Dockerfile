@@ -12,21 +12,21 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Go 1.24 based on architecture
+# Install Go 1.24 based on architecture with retry and better error handling
 RUN case "${TARGETPLATFORM}" in \
     "linux/amd64") \
-        curl -fsSL https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz \
-        && tar -C /usr/local -xzf go1.24.0.tar.gz \
+        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for amd64 after retries"; exit 1; } \
+        && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for amd64"; exit 1; } \
         && rm go1.24.0.tar.gz \
         ;; \
     "linux/arm64") \
-        curl -fsSL https://go.dev/dl/go1.24.0.linux-arm64.tar.gz -o go1.24.0.tar.gz \
-        && tar -C /usr/local -xzf go1.24.0.tar.gz \
+        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-arm64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for arm64 after retries"; exit 1; } \
+        && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for arm64"; exit 1; } \
         && rm go1.24.0.tar.gz \
         ;; \
     "linux/riscv64") \
-        curl -fsSL https://go.dev/dl/go1.24.0.linux-riscv64.tar.gz -o go1.24.0.tar.gz \
-        && tar -C /usr/local -xzf go1.24.0.tar.gz \
+        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-riscv64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for riscv64 after retries"; exit 1; } \
+        && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for riscv64"; exit 1; } \
         && rm go1.24.0.tar.gz \
         ;; \
     *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \

@@ -29,7 +29,6 @@ jobs:
           image-ref: 'ubuntu:jammy'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'  # Fail the build if critical/high vulnerabilities are found
-          platform: 'linux/riscv64'  # Scan for riscv64 platform to match target architectures
           scanners: 'vuln'  # Use Docker for scanning, avoid containerd/podman
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
