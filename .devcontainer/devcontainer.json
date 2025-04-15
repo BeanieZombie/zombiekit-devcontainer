@@ -1,0 +1,26 @@
+
+{
+  "name": "Zombie Kit Devcontainer",
+  "image": "ghcr.io/beaniezombie/zombiekit-devcontainer:latest",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash",
+    "go.toolsManagement.checkForUpdates": "off",
+    "go.useLanguageServer": true,
+    "editor.formatOnSave": true
+  },
+  "extensions": [
+    "golang.go",
+    "juanblanco.solidity",
+    "esbenp.prettier-vscode"
+  ],
+  "forwardPorts": [3000, 5050, 8545, 8546],
+  "runArgs": [
+    "--memory=8g",
+    "--cpus=2",
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined"
+  ],
+  "remoteUser": "vscode",
+  "postCreateCommand": "echo 'Run `bash scripts/fetch-genesis.sh` to fetch the Sonic genesis file and prime the database.'"
+}

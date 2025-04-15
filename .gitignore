@@ -1,0 +1,28 @@
+ *.dockerignore
+ docker-compose.yml
+
+ # Editor and IDE files
+ .vscode/
+ .idea/
+ *.sublime-project
+ *.sublime-workspace
+ *.code-workspace
+
+ # Operating system files
+ .DS_Store
+ Thumbs.db
+
+ # Temporary files
+ *.tmp
+ *.log
+ *.bak
+ *.swp
+ *~
+
+ # Dependency downloads and build artifacts
+ sonic/
+ bun/
+ foundry/
+
+ # GitHub Actions artifacts
+ .github/workflows/*.log
