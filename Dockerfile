@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     git \
     build-essential \
     sudo \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Debug: Print TARGETPLATFORM, TARGETARCH, and TARGETVARIANT values
