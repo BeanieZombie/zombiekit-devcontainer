@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y \
 # Debug: Print TARGETPLATFORM, TARGETARCH, and TARGETVARIANT values
 RUN echo "Building for TARGETPLATFORM: ${TARGETPLATFORM}, TARGETARCH: ${TARGETARCH}, TARGETVARIANT: ${TARGETVARIANT}"
 
-# Normalize TARGETPLATFORM to handle variants (e.g., linux/arm64/v8 -> linux/arm64)
-RUN case "${TARGETPLATFORM}" in \
+# Normalize TARGETPLATFORM to handle variants (e.g., linux/arm64/v8 -> linux/arm64), with a fallback
+RUN case "${TARGETPLATFORM:-linux/amd64}" in \
     linux/amd64*) \
         echo "Normalized platform: linux/amd64" \
         && curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for amd64 after retries"; exit 1; } \
@@ -38,7 +38,7 @@ RUN case "${TARGETPLATFORM}" in \
         && rm go1.24.0.tar.gz \
         ;; \
     *) \
-        echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 \
+        echo "Unsupported platform: ${TARGETPLATFORM:-linux/amd64}" && exit 1 \
         ;; \
     esac
 ENV PATH=$PATH:/usr/local/go/bin
