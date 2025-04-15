@@ -47,9 +47,12 @@ ENV PATH=$PATH:/usr/local/go/bin
 RUN useradd -m -s /bin/bash vscode && echo "vscode:vscode" | chpasswd && adduser vscode sudo
 RUN echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode
 
+# Copy and set permissions for setup script before switching user
+COPY scripts/setup-tools.sh /home/vscode/setup-tools.sh
+RUN chown vscode:vscode /home/vscode/setup-tools.sh && chmod +x /home/vscode/setup-tools.sh
+
 USER vscode
 WORKDIR /home/vscode
 
-# Copy and run setup script
-COPY scripts/setup-tools.sh /home/vscode/setup-tools.sh
-RUN chmod +x /home/vscode/setup-tools.sh && /home/vscode/setup-tools.sh
+# Run setup script
+RUN /home/vscode/setup-tools.sh
