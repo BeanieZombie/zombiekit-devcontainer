@@ -1,5 +1,7 @@
-# Detect architecture from TARGETPLATFORM
-ARG TARGETPLATFORM
+# Detect architecture from TARGETPLATFORM, with a default value
+ARG TARGETPLATFORM=linux/amd64
+ARG TARGETARCH
+ARG TARGETVARIANT
 
 # Base image for all platforms (using ubuntu:jammy)
 FROM ubuntu:jammy AS base
@@ -12,8 +14,8 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Debug: Print TARGETPLATFORM value
-RUN echo "Building for TARGETPLATFORM: ${TARGETPLATFORM}"
+# Debug: Print TARGETPLATFORM, TARGETARCH, and TARGETVARIANT values
+RUN echo "Building for TARGETPLATFORM: ${TARGETPLATFORM}, TARGETARCH: ${TARGETARCH}, TARGETVARIANT: ${TARGETVARIANT}"
 
 # Normalize TARGETPLATFORM to handle variants (e.g., linux/arm64/v8 -> linux/arm64)
 RUN case "${TARGETPLATFORM}" in \
