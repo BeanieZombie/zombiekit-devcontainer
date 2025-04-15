@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     sudo \
     unzip \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Debug: Print TARGETPLATFORM, TARGETARCH, and TARGETVARIANT values

@@ -31,27 +31,40 @@
      SONIC_DIR="$HOME/sonic"
      mkdir -p "$SONIC_DIR"
      cd "$SONIC_DIR"
-     # Only clone if the repository isn't already cloned
      if [ ! -d ".git" ]; then
-         git clone https://github.com/0xsoniclabs/Sonic.git .
+         git clone https://github.com/sonic-labs/sonic-core.git .
      fi
      git fetch --tags
+     if ! git rev-parse "tags/v2.0.1" >/dev/null 2>&1; then
+         echo "Error: Tag v2.0.1 not found in sonic-core repository"
+         exit 1
+     fi
      git checkout -B v2.0.1 tags/v2.0.1
-     make all
+
+     echo "Running make all..."
+     make all || {
+         echo "Error: Sonic build failed with make all"
+         exit 1
+     }
+     ls -R build || {
+         echo "Error: Failed to list build directory after make all"
+         exit 1
+     }
 
      echo "=== Copying binaries to \$HOME/bin ==="
      mkdir -p "$HOME/bin"
-     # Use quotes and check if files exist before copying
      if [ -f "build/bin/sonicd" ]; then
          cp "build/bin/sonicd" "$HOME/bin/"
      else
-         echo "Error: build/bin/sonicd not found." && exit 1
+         echo "Error: build/bin/sonicd not found after make all"
+         exit 1
      fi
 
      if [ -f "build/bin/sonictool" ]; then
          cp "build/bin/sonictool" "$HOME/bin/"
      else
-         echo "Error: build/bin/sonictool not found." && exit 1
+         echo "Error: build/bin/sonictool not found after make all"
+         exit 1
      fi
 
      if ! grep -q '$HOME/bin' "$HOME/.bashrc"; then
