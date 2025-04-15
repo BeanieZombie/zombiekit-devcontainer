@@ -1,8 +1,8 @@
 # Detect architecture from TARGETPLATFORM
 ARG TARGETPLATFORM
 
-# Base image for all platforms (using riscv64/ubuntu:jammy)
-FROM riscv64/ubuntu:jammy AS base
+# Base image for all platforms (using ubuntu:jammy)
+FROM ubuntu:jammy AS base
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
