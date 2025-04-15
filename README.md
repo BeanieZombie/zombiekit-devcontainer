@@ -5,7 +5,7 @@
  This devcontainer is designed to be used with the `BeanieZombie/zombiekit` repository. Follow the instructions in the [Zombie Kit README](https://github.com/BeanieZombie/zombiekit/blob/main/README.md) to set up your development environment.
 
  ### Included Tools
- - Go (1.22) with GoFiber support
+ - Go (1.22 for amd64/arm64, 1.24 for riscv64) with GoFiber support
  - Bun (1.1.0) for Viem and Lit Web Components
  - Foundry (v0.2.0) for Solidity smart contracts
  - Sonic tools (`sonicd`, `sonictool`, v2.0.1)

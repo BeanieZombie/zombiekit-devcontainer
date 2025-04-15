@@ -1,18 +1,21 @@
-
 {
   "name": "Zombie Kit Devcontainer",
   "image": "ghcr.io/beaniezombie/zombiekit-devcontainer:latest",
-  "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash",
-    "go.toolsManagement.checkForUpdates": "off",
-    "go.useLanguageServer": true,
-    "editor.formatOnSave": true
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "go.toolsManagement.checkForUpdates": "off",
+        "go.useLanguageServer": true,
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "golang.go",
+        "juanblanco.solidity",
+        "esbenp.prettier-vscode"
+      ]
+    }
   },
-  "extensions": [
-    "golang.go",
-    "juanblanco.solidity",
-    "esbenp.prettier-vscode"
-  ],
   "forwardPorts": [3000, 5050, 8545, 8546],
   "runArgs": [
     "--memory=8g",
