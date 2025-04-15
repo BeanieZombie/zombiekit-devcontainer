@@ -12,24 +12,32 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Go 1.24 based on architecture with retry and better error handling
+# Debug: Print TARGETPLATFORM value
+RUN echo "Building for TARGETPLATFORM: ${TARGETPLATFORM}"
+
+# Normalize TARGETPLATFORM to handle variants (e.g., linux/arm64/v8 -> linux/arm64)
 RUN case "${TARGETPLATFORM}" in \
-    "linux/amd64") \
-        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for amd64 after retries"; exit 1; } \
+    linux/amd64*) \
+        echo "Normalized platform: linux/amd64" \
+        && curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for amd64 after retries"; exit 1; } \
         && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for amd64"; exit 1; } \
         && rm go1.24.0.tar.gz \
         ;; \
-    "linux/arm64") \
-        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-arm64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for arm64 after retries"; exit 1; } \
+    linux/arm64*) \
+        echo "Normalized platform: linux/arm64" \
+        && curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-arm64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for arm64 after retries"; exit 1; } \
         && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for arm64"; exit 1; } \
         && rm go1.24.0.tar.gz \
         ;; \
-    "linux/riscv64") \
-        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-riscv64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for riscv64 after retries"; exit 1; } \
+    linux/riscv64*) \
+        echo "Normalized platform: linux/riscv64" \
+        && curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-riscv64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for riscv64 after retries"; exit 1; } \
         && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for riscv64"; exit 1; } \
         && rm go1.24.0.tar.gz \
         ;; \
-    *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
+    *) \
+        echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 \
+        ;; \
     esac
 ENV PATH=$PATH:/usr/local/go/bin
 

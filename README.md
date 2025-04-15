@@ -1,4 +1,5 @@
- This repository provides a devcontainer image for developing [​Zombie Kit](https://github.com/BeanieZombie/zombiekit), optimized for RISC-V and compatible with various architectures.
+Zombie Kit Devcontainer
+ This repository provides a devcontainer image for developing [Zombie Kit](https://github.com/BeanieZombie/zombiekit), optimized for RISC-V and compatible with various architectures.
 
  ## Usage
 
