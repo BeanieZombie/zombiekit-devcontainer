@@ -18,7 +18,8 @@ RUN curl -L https://github.com/actions/runner/releases/download/v2.317.0/actions
     tar xzf actions-runner-linux-arm64.tar.gz && \
     rm actions-runner-linux-arm64.tar.gz
 
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
+# Copy entrypoint script and set executable permission at copy time
+COPY --chmod=0755 entrypoint.sh .
 
+# Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
