@@ -17,12 +17,17 @@ RUN cd /go && git clone https://github.com/0xsoniclabs/sonic.git && cd sonic && 
 WORKDIR /go/sonic
 
 RUN go mod download
+# Debug: Print the Makefile to understand build targets
+RUN cat /go/sonic/Makefile
 # Use verbose output to debug build issues
 RUN make all V=1
 # Debug: List the entire build directory to check for binaries
 RUN ls -lR /go/sonic/build/
-# Ensure the bin directory exists and list its contents
-RUN mkdir -p /go/sonic/build/bin/ && ls -l /go/sonic/build/bin/
+# Validate that the binaries exist before proceeding
+RUN if [ ! -f /go/sonic/build/bin/sonicd ] || [ ! -f /go/sonic/build/bin/sonictool ]; then \
+        echo "Required binaries not found in /go/sonic/build/bin/"; \
+        exit 1; \
+    fi
 
 # Runtime stage
 # Detect architecture from TARGETPLATFORM, with a default value
