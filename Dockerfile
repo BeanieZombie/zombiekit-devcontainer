@@ -17,10 +17,12 @@ RUN cd /go && git clone https://github.com/0xsoniclabs/sonic.git && cd sonic && 
 WORKDIR /go/sonic
 
 RUN go mod download
-RUN make all
-
-# Debug: List the built binaries to verify presence
-RUN ls -l /go/sonic/build/bin/
+# Use verbose output to debug build issues
+RUN make all V=1
+# Debug: List the entire build directory to check for binaries
+RUN ls -lR /go/sonic/build/
+# Ensure the bin directory exists and list its contents
+RUN mkdir -p /go/sonic/build/bin/ && ls -l /go/sonic/build/bin/
 
 # Runtime stage
 # Detect architecture from TARGETPLATFORM, with a default value
@@ -28,8 +30,8 @@ ARG TARGETPLATFORM=linux/amd64
 ARG TARGETARCH
 ARG TARGETVARIANT
 
-# Base image for all platforms (using ubuntu:jammy with a specific tag)
-FROM ubuntu:jammy-20250404 AS base
+# Base image for all platforms (using ubuntu:jammy)
+FROM ubuntu:jammy AS base
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
