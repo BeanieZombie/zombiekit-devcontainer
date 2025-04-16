@@ -16,7 +16,7 @@ This devcontainer is designed to be used with the `BeanieZombie/zombiekit` repos
 ### Notes
 
 - The image is currently built for `linux/amd64` and `linux/arm64` architectures due to limitations in the `golang:1.24` base image, which does not support `linux/riscv64` in its Docker image manifest. Support for `linux/riscv64` will be added in a future update by building a custom `golang:1.24` image with RISC-V support or using a different Go version that includes `linux/riscv64` manifests.
-- The base image has been updated to `ubuntu:jammy-20250412` to include recent security patches and address critical/high vulnerabilities.
+- The base image has been updated to `ubuntu:jammy-20250404` to include recent security patches and address critical/high vulnerabilities.
 - Resource settings are optimized for RISC-V; adjust `runArgs` in `devcontainer.json` if needed.
 - The devcontainer includes `sonicd` and `sonictool` (v2.0.1) for development purposes, such as generating genesis files or testing node interactions. It does not run a full Sonic archive node. To run a Sonic archive node, follow the official Sonic documentation at https://docs.soniclabs.com/sonic/node-deployment/archive-node, which requires significant resources (e.g., 1 TB SSD, 32+ GB RAM) and network configuration (port 5050).
 

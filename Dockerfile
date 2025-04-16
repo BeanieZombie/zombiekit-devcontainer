@@ -29,7 +29,7 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 
 # Base image for all platforms (using ubuntu:jammy with a specific tag)
-FROM ubuntu:jammy-20250412 AS base
+FROM ubuntu:jammy-20250404 AS base
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
