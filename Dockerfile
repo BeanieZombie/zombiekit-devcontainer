@@ -28,8 +28,8 @@ ARG TARGETPLATFORM=linux/amd64
 ARG TARGETARCH
 ARG TARGETVARIANT
 
-# Base image for all platforms (using ubuntu:jammy)
-FROM ubuntu:jammy AS base
+# Base image for all platforms (using ubuntu:jammy with a specific tag)
+FROM ubuntu:jammy-20250412 AS base
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
