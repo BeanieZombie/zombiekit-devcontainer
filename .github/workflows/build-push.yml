@@ -42,7 +42,7 @@ jobs:
         run: |
           echo "Verifying package accessibility before push..."
           docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || echo "AMD64 image does not exist or is inaccessible (expected if package was deleted)"
-      - name: Build and push Docker image (elderberry: true
+      - name: Build and push Docker image (AMD64)
         uses: docker/build-push-action@v6
         with:
           context: .
