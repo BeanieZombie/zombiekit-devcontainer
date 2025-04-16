@@ -11,6 +11,10 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Debug: Verify C compiler and make are installed
+RUN gcc --version || { echo "C compiler not found."; exit 1; }
+RUN make --version || { echo "make not found."; exit 1; }
+
 # Debug: Print Go version and environment
 RUN go version
 RUN go env
@@ -38,23 +42,11 @@ RUN cat /go/sonic/Makefile
 # Debug: List the cmd directory to confirm source files
 RUN ls -l /go/sonic/cmd/
 
-# Debug: List the build/bin directory before building
-RUN ls -l /go/sonic/build/bin/ || echo "Directory /go/sonic/build/bin/ does not exist yet."
-
 # Build Sonic with verbose output, log any errors
 RUN make all V=1 || { echo "Build failed. Check verbose output above for details."; exit 1; }
 
 # Debug: List the entire build directory to check for binaries
 RUN ls -lR /go/sonic/build/
-
-# Validate that the binaries exist before proceeding
-RUN if [ ! -f /go/sonic/build/bin/sonicd ] || [ ! -f /go/sonic/build/bin/sonictool ]; then \
-        echo "Required binaries not found in /go/sonic/build/bin/"; \
-        exit 1; \
-    fi
-
-# Debug: List the bin directory contents to confirm presence
-RUN ls -l /go/sonic/build/bin/
 
 # Runtime stage
 # Detect architecture from TARGETPLATFORM, with a default value
@@ -98,8 +90,8 @@ RUN case "${TARGETPLATFORM:-linux/amd64}" in \
 ENV PATH=$PATH:/usr/local/go/bin
 
 # Copy Sonic binaries from the builder stage
-COPY --from=builder /go/sonic/build/bin/sonicd /usr/local/bin/
-COPY --from=builder /go/sonic/build/bin/sonictool /usr/local/bin/
+COPY --from=builder /go/sonic/build/sonicd /usr/local/bin/
+COPY --from=builder /go/sonic/build/sonictool /usr/local/bin/
 
 # Create non-root user 'vscode' with sudo privileges
 RUN useradd -m -s /bin/bash vscode && echo "vscode:vscode" | chpasswd && adduser vscode sudo
