@@ -1,0 +1,6 @@
+*.md
+*.log
+.git
+.github-runner/.git
+.github-runner/.gitignore
+.github-runner/.dockerignore
