@@ -19,7 +19,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # Reverted to GITHUB_TOKEN
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -45,8 +45,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: ghcr.io/beaniezombie/zombiekit-devcontainer:amd64
-          # Ensure a single manifest is pushed, not a manifest list
-          outputs: type=registry,oci-mediatypes=true
+          # Ensure a single-architecture manifest is pushed
+          outputs: type=registry,oci-mediatypes=false
           cache-from: type=gha
           cache-to: type=gha,mode=max,key=${{ github.sha }}-amd64
 
@@ -62,7 +62,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # Reverted to GITHUB_TOKEN
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Debug TARGETPLATFORM
@@ -86,8 +86,8 @@ jobs:
           push: true
           platforms: linux/arm64
           tags: ghcr.io/beaniezombie/zombiekit-devcontainer:arm64
-          # Ensure a single manifest is pushed, not a manifest list
-          outputs: type=registry,oci-mediatypes=true
+          # Ensure a single-architecture manifest is pushed
+          outputs: type=registry,oci-mediatypes=false
           cache-from: type=gha
           cache-to: type=gha,mode=max,key=${{ github.sha }}-arm64
 
@@ -104,7 +104,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # Reverted to GITHUB_TOKEN
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Debug Pull Images
         run: |
