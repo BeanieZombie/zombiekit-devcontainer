@@ -9,7 +9,7 @@ permissions:
 jobs:
   build-amd64:
     if: github.event_name == 'push' && github.repository == 'BeanieZombie/zombiekit-devcontainer'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-jammy  # Use Ubuntu 22.04 LTS (Jammy Jellyfish) for consistency with base image
     timeout-minutes: 120  # Increase timeout to 120 minutes
     steps:
       - name: Checkout code
@@ -112,7 +112,7 @@ jobs:
   combine-images:
     needs: [build-amd64, build-arm64]
     if: github.event_name == 'push' && github.repository == 'BeanieZombie/zombiekit-devcontainer'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-jammy  # Use Ubuntu 22.04 LTS (Jammy Jellyfish) for consistency with base image
     steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
