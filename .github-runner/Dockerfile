@@ -1,13 +1,22 @@
 FROM ubuntu:24.04
 
-# Install dependencies
+# Install base dependencies and Docker
 RUN apt-get update && \
-    apt-get install -y curl sudo git build-essential software-properties-common && \
+    apt-get install -y \
+    curl \
+    sudo \
+    git \
+    build-essential \
+    software-properties-common \
+    docker.io && \
     rm -rf /var/lib/apt/lists/*
 
 # Create runner user
 RUN useradd -m runner
 RUN echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Add runner user to docker group
+RUN usermod -aG docker runner
 
 USER runner
 WORKDIR /home/runner
