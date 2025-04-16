@@ -98,23 +98,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Debug login
+      - name: Debug Pull Images
         run: |
-          echo "Verifying login to GHCR..."
-          docker pull --platform linux/amd64 ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || echo "Failed to pull AMD64 image"
-          docker pull --platform linux/arm64 ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || echo "Failed to pull ARM64 image"
+          echo "Verifying AMD64 and ARM64 images..."
+          docker pull --platform linux/amd64 ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || { echo "Failed to pull AMD64 image"; exit 1; }
+          docker pull --platform linux/arm64 ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || { echo "Failed to pull ARM64 image"; exit 1; }
 
-      - name: Create manifest
+      - name: Debug Image Manifests
+        run: |
+          echo "Inspecting AMD64 image manifest..."
+          docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || { echo "Failed to inspect AMD64 image manifest"; exit 1; }
+          echo "Inspecting ARM64 image manifest..."
+          docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || { echo "Failed to inspect ARM64 image manifest"; exit 1; }
+
+      - name: Create Manifest
         run: |
           docker manifest create ghcr.io/beaniezombie/zombiekit-devcontainer:latest \
             --amend ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 \
-            --amend ghcr.io/beaniezombie/zombiekit-devcontainer:arm64
+            --amend ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || { echo "Manifest creation failed."; exit 1; }
 
-      - name: Debug manifest creation
+      - name: Debug Manifest Creation
         run: |
           echo "Inspecting created manifest..."
-          docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:latest || { echo "Manifest creation failed."; exit 1; }
+          docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:latest || { echo "Manifest inspection failed."; exit 1; }
 
-      - name: Push manifest
+      - name: Push Manifest
         run: |
-          docker manifest push --purge ghcr.io/beaniezombie/zombiekit-devcontainer:latest
+          docker manifest push --purge ghcr.io/beaniezombie/zombiekit-devcontainer:latest || { echo "Manifest push failed."; exit 1; }
