@@ -1,7 +1,7 @@
 # Build stage for Sonic
 FROM golang:1.24 AS builder
 
-ARG VERSION=v2.0.3
+ARG VERSION=v2.0.4
 
 # Install build dependencies for Sonic
 RUN apt-get update && apt-get install -y \
@@ -25,6 +25,9 @@ RUN ls -l /go/sonic/
 
 # Ensure dependencies are downloaded
 RUN go mod download || { echo "Failed to download Go dependencies."; exit 1; }
+
+# Debug: Print the go.mod file to inspect dependencies
+RUN cat /go/sonic/go.mod
 
 # Debug: Verify Go dependencies
 RUN go mod verify || { echo "Dependency verification failed."; exit 1; }
