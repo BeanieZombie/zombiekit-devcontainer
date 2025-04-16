@@ -31,7 +31,7 @@ jobs:
       - name: Scan base image for vulnerabilities (Ubuntu:jammy)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'Ubuntu:jammy'
+          image-ref: 'ubuntu:jammy'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'  # Fail the build if critical/high vulnerabilities are found
           scanners: 'vuln'  # Use Docker for scanning, avoid containerd/podman
