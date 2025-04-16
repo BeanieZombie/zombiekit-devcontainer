@@ -51,6 +51,10 @@ jobs:
           tags: ghcr.io/beaniezombie/zombiekit-devcontainer:amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max,key=${{ github.sha }}-amd64
+      - name: Verify Images After Push
+        run: |
+          echo "Verifying AMD64 image after push..."
+          docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || { echo "AMD64 image not found"; exit 1; }
 
   build-arm64:
     if: github.event_name == 'push' && github.repository == 'BeanieZombie/zombiekit-devcontainer'
@@ -94,6 +98,10 @@ jobs:
           tags: ghcr.io/beaniezombie/zombiekit-devcontainer:arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max,key=${{ github.sha }}-arm64
+      - name: Verify Images After Push
+        run: |
+          echo "Verifying ARM64 image after push..."
+          docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || { echo "ARM64 image not found"; exit 1; }
 
   combine-images:
     needs: [build-amd64, build-arm64]
@@ -110,11 +118,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Debug Pull Images
+      - name: Pull Images with Retry
         run: |
           echo "Verifying AMD64 and ARM64 images..."
-          docker pull --platform linux/amd64 ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || { echo "Failed to pull AMD64 image"; exit 1; }
-          docker pull --platform linux/arm64 ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || { echo "Failed to pull ARM64 image"; exit 1; }
+          for i in {1..3}; do
+            docker pull --platform linux/amd64 ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 && break || sleep 10
+          done || { echo "Failed to pull AMD64 image after retries"; exit 1; }
+          for i in {1..3}; do
+            docker pull --platform linux/arm64 ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 && break || sleep 10
+          done || { echo "Failed to pull ARM64 image after retries"; exit 1; }
 
       - name: Create and Push Manifest
         run: |
