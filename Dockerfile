@@ -11,23 +11,31 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone and build Sonic
-RUN cd /go && git clone https://github.com/0xsoniclabs/sonic.git && cd sonic && git fetch --tags && git checkout -B ${VERSION} tags/${VERSION}
+# Clone Sonic with shallow clone for efficiency
+RUN cd /go && git clone --depth 1 --branch ${VERSION} https://github.com/0xsoniclabs/sonic.git
 
 WORKDIR /go/sonic
 
-RUN go mod download
+# Ensure dependencies are downloaded
+RUN go mod download || { echo "Failed to download Go dependencies."; exit 1; }
+
 # Debug: Print the Makefile to understand build targets
 RUN cat /go/sonic/Makefile
-# Use verbose output to debug build issues
-RUN make all V=1
+
+# Build Sonic with verbose output, log any errors
+RUN make all V=1 || { echo "Build failed. Inspecting logs."; cat /go/sonic/build/logs/* || true; exit 1; }
+
 # Debug: List the entire build directory to check for binaries
 RUN ls -lR /go/sonic/build/
+
 # Validate that the binaries exist before proceeding
 RUN if [ ! -f /go/sonic/build/bin/sonicd ] || [ ! -f /go/sonic/build/bin/sonictool ]; then \
         echo "Required binaries not found in /go/sonic/build/bin/"; \
         exit 1; \
     fi
+
+# Debug: List the bin directory contents to confirm presence
+RUN ls -l /go/sonic/build/bin/
 
 # Runtime stage
 # Detect architecture from TARGETPLATFORM, with a default value
