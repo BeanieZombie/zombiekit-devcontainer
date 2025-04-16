@@ -1,7 +1,7 @@
 # Build stage for Sonic
 FROM golang:1.24 AS builder
 
-ARG VERSION=v2.0.1
+ARG VERSION=v2.0.3
 
 # Install build dependencies for Sonic
 RUN apt-get update && apt-get install -y \
@@ -20,14 +20,23 @@ RUN cd /go && git clone --depth 1 --branch ${VERSION} https://github.com/0xsonic
 
 WORKDIR /go/sonic
 
+# Debug: List the root directory to confirm repository structure
+RUN ls -l /go/sonic/
+
 # Ensure dependencies are downloaded
 RUN go mod download || { echo "Failed to download Go dependencies."; exit 1; }
+
+# Debug: Verify Go dependencies
+RUN go mod verify || { echo "Dependency verification failed."; exit 1; }
 
 # Debug: Print the Makefile to understand build targets
 RUN cat /go/sonic/Makefile
 
 # Debug: List the cmd directory to confirm source files
 RUN ls -l /go/sonic/cmd/
+
+# Debug: List the build/bin directory before building
+RUN ls -l /go/sonic/build/bin/ || echo "Directory /go/sonic/build/bin/ does not exist yet."
 
 # Build Sonic with verbose output, log any errors
 RUN make all V=1 || { echo "Build failed. Check verbose output above for details."; exit 1; }
