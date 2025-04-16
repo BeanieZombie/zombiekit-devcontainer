@@ -42,7 +42,7 @@ jobs:
         run: |
           echo "Verifying package accessibility before push..."
           docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || echo "AMD64 image does not exist or is inaccessible (expected if package was deleted)"
-      - name: Build and push Docker image (AMD64)
+      - name: Build and push Docker image (elderberry: true
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -72,6 +72,10 @@ jobs:
       - name: Check Docker Info
         run: |
           docker info || { echo "Docker info failed"; exit 1; }
+          docker ps -a || { echo "Docker ps failed"; exit 1; }
+          docker images || { echo "Docker images failed"; exit 1; }
+          docker buildx version || { echo "Buildx version check failed"; exit 1; }
+          docker buildx inspect || { echo "Buildx inspect failed"; exit 1; }
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Debug TARGETPLATFORM
@@ -99,6 +103,9 @@ jobs:
           push: true
           platforms: linux/arm64
           tags: ghcr.io/beaniezombie/zombiekit-devcontainer:arm64
+          labels: |
+            org.opencontainers.image.os=linux
+            org.opencontainers.image.architecture=arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max,key=${{ github.sha }}-arm64
       - name: Verify Images After Push
@@ -143,3 +150,9 @@ jobs:
             --amend ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 \
             --amend ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || { echo "Manifest creation failed."; exit 1; }
           docker manifest push --purge ghcr.io/beaniezombie/zombiekit-devcontainer:latest || { echo "Manifest push failed."; exit 1; }
+
+      - name: Make container public
+        run: gh api --method PATCH /user/packages/container/zombiekit-devcontainer/visibility \
+          -f visibility=public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
