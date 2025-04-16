@@ -23,13 +23,15 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      - name: Set up environment variables
+        run: echo "GITHUB_PAT=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
       - name: Debug TARGETPLATFORM
         run: |
-          echo "Platforms to build: linux/amd64,linux/arm64,linux/riscv64"
-      - name: Scan base image for vulnerabilities (ubuntu:jammy)
+          echo "Platforms to build: linux/amd64,linux/arm64"
+      - name: Scan base image for vulnerabilities (Ubuntu:jammy)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'ubuntu:jammy'
+          image-ref: 'Ubuntu:jammy'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'  # Fail the build if critical/high vulnerabilities are found
           scanners: 'vuln'  # Use Docker for scanning, avoid containerd/podman
@@ -38,7 +40,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64,linux/riscv64
+          platforms: linux/amd64,linux/arm64
           tags: ghcr.io/beaniezombie/zombiekit-devcontainer:latest
           cache-from: type=gha  # Use GitHub Actions cache
           cache-to: type=gha,mode=max  # Export cache to GitHub Actions
