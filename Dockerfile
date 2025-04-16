@@ -1,5 +1,5 @@
 # Build stage for Sonic
-FROM golang:1.22 AS builder
+FROM golang:1.24 AS builder
 
 ARG VERSION=v2.0.1
 
@@ -12,9 +12,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone and build Sonic
-RUN cd /go && git clone https://github.com/sonic-labs/sonic-core.git && cd sonic-core && git fetch --tags && git checkout -B ${VERSION} tags/${VERSION}
+RUN cd /go && git clone https://github.com/0xsoniclabs/sonic.git && cd sonic && git fetch --tags && git checkout -B ${VERSION} tags/${VERSION}
 
-WORKDIR /go/sonic-core
+WORKDIR /go/sonic
 
 RUN go mod download
 RUN make all
@@ -27,9 +27,6 @@ ARG TARGETVARIANT
 
 # Base image for all platforms (using ubuntu:jammy)
 FROM ubuntu:jammy AS base
-
-# Set environment variable for GitHub PAT
-ENV GITHUB_PAT=${GITHUB_PAT}
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
@@ -70,8 +67,8 @@ RUN case "${TARGETPLATFORM:-linux/amd64}" in \
 ENV PATH=$PATH:/usr/local/go/bin
 
 # Copy Sonic binaries from the builder stage
-COPY --from=builder /go/sonic-core/build/bin/sonicd /usr/local/bin/
-COPY --from=builder /go/sonic-core/build/bin/sonictool /usr/local/bin/
+COPY --from=builder /go/sonic/build/bin/sonicd /usr/local/bin/
+COPY --from=builder /go/sonic/build/bin/sonictool /usr/local/bin/
 
 # Create non-root user 'vscode' with sudo privileges
 RUN useradd -m -s /bin/bash vscode && echo "vscode:vscode" | chpasswd && adduser vscode sudo
