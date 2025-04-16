@@ -19,6 +19,9 @@ WORKDIR /go/sonic
 RUN go mod download
 RUN make all
 
+# Debug: List the built binaries to verify presence
+RUN ls -l /go/sonic/build/bin/
+
 # Runtime stage
 # Detect architecture from TARGETPLATFORM, with a default value
 ARG TARGETPLATFORM=linux/amd64

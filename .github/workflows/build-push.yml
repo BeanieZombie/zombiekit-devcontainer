@@ -25,7 +25,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Debug TARGETPLATFORM
         run: |
-          echo "Platforms to build: linux/amd64,linux/arm64"
+          echo "Platforms to build: linux/amd64,linux/arm64,linux/riscv64"
       - name: Scan base image for vulnerabilities (ubuntu:jammy)
         uses: aquasecurity/trivy-action@master
         with:
@@ -38,7 +38,5 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/riscv64
           tags: ghcr.io/beaniezombie/zombiekit-devcontainer:latest
-          cache-from: type=gha  # Use GitHub Actions cache
-          cache-to: type=gha,mode=max  # Export cache to GitHub Actions
