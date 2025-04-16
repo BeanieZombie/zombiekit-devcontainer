@@ -9,7 +9,7 @@ permissions:
 jobs:
   build-amd64:
     if: github.event_name == 'push' && github.repository == 'BeanieZombie/zombiekit-devcontainer'
-    runs-on: ubuntu-latest  # Use Ubuntu 22.04 LTS (Jammy Jellyfish) for consistency with base image
+    runs-on: ubuntu-latest  # Use latest Ubuntu version for GitHub-hosted runners
     timeout-minutes: 60  # Increase timeout to 60 minutes
     steps:
       - name: Checkout code
@@ -86,28 +86,35 @@ jobs:
   combine-images:
     needs: [build-amd64, build-arm64]
     if: github.event_name == 'push' && github.repository == 'BeanieZombie/zombiekit-devcontainer'
-    runs-on: ubuntu-latest  # Use Ubuntu 22.04 LTS (Jammy Jellyfish) for consistency with base image
+    runs-on: ubuntu-latest  # Use latest Ubuntu version for GitHub-hosted runners
     steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Debug login
         run: |
           echo "Verifying login to GHCR..."
-          docker pull ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || echo "Failed to pull AMD64 image"
-          docker pull ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || echo "Failed to pull ARM64 image"
+          docker pull --platform linux/amd64 ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || echo "Failed to pull AMD64 image"
+          docker pull --platform linux/arm64 ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || echo "Failed to pull ARM64 image"
+
       - name: Create manifest
         run: |
           docker manifest create ghcr.io/beaniezombie/zombiekit-devcontainer:latest \
             --amend ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 \
             --amend ghcr.io/beaniezombie/zombiekit-devcontainer:arm64
+
       - name: Debug manifest creation
         run: |
           echo "Inspecting created manifest..."
           docker manifest inspect ghcr.io/beaniezombie/zombiekit-devcontainer:latest || { echo "Manifest creation failed."; exit 1; }
+
       - name: Push manifest
         run: |
           docker manifest push --purge ghcr.io/beaniezombie/zombiekit-devcontainer:latest
