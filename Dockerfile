@@ -11,6 +11,10 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Debug: Print Go version and environment
+RUN go version
+RUN go env
+
 # Clone Sonic with shallow clone for efficiency
 RUN cd /go && git clone --depth 1 --branch ${VERSION} https://github.com/0xsoniclabs/sonic.git
 
