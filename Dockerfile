@@ -1,3 +1,25 @@
+# Build stage for Sonic
+FROM golang:1.22 AS builder
+
+ARG VERSION=v2.0.1
+
+# Install build dependencies for Sonic
+RUN apt-get update && apt-get install -y \
+    git \
+    musl-dev \
+    make \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone and build Sonic
+RUN cd /go && git clone https://github.com/sonic-labs/sonic-core.git && cd sonic-core && git fetch --tags && git checkout -B ${VERSION} tags/${VERSION}
+
+WORKDIR /go/sonic-core
+
+RUN go mod download
+RUN make all
+
+# Runtime stage
 # Detect architecture from TARGETPLATFORM, with a default value
 ARG TARGETPLATFORM=linux/amd64
 ARG TARGETARCH
@@ -6,6 +28,9 @@ ARG TARGETVARIANT
 # Base image for all platforms (using ubuntu:jammy)
 FROM ubuntu:jammy AS base
 
+# Set environment variable for GitHub PAT
+ENV GITHUB_PAT=${GITHUB_PAT}
+
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
     curl \
@@ -13,13 +38,12 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     sudo \
     unzip \
-    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Debug: Print TARGETPLATFORM, TARGETARCH, and TARGETVARIANT values
 RUN echo "Building for TARGETPLATFORM: ${TARGETPLATFORM}, TARGETARCH: ${TARGETARCH}, TARGETVARIANT: ${TARGETVARIANT}"
 
-# Normalize TARGETPLATFORM to handle variants (e.g., linux/arm64/v8 -> linux/arm64), with a fallback
+# Install Go 1.24 for runtime use
 RUN case "${TARGETPLATFORM:-linux/amd64}" in \
     linux/amd64*) \
         echo "Normalized platform: linux/amd64" \
@@ -45,6 +69,10 @@ RUN case "${TARGETPLATFORM:-linux/amd64}" in \
     esac
 ENV PATH=$PATH:/usr/local/go/bin
 
+# Copy Sonic binaries from the builder stage
+COPY --from=builder /go/sonic-core/build/bin/sonicd /usr/local/bin/
+COPY --from=builder /go/sonic-core/build/bin/sonictool /usr/local/bin/
+
 # Create non-root user 'vscode' with sudo privileges
 RUN useradd -m -s /bin/bash vscode && echo "vscode:vscode" | chpasswd && adduser vscode sudo
 RUN echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode
@@ -56,5 +84,5 @@ RUN chown vscode:vscode /home/vscode/setup-tools.sh && chmod +x /home/vscode/set
 USER vscode
 WORKDIR /home/vscode
 
-# Run setup script
+# Run setup script (for Bun and Foundry installation)
 RUN /home/vscode/setup-tools.sh
