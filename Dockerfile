@@ -22,8 +22,11 @@ RUN go mod download || { echo "Failed to download Go dependencies."; exit 1; }
 # Debug: Print the Makefile to understand build targets
 RUN cat /go/sonic/Makefile
 
+# Debug: List the cmd directory to confirm source files
+RUN ls -l /go/sonic/cmd/
+
 # Build Sonic with verbose output, log any errors
-RUN make all V=1 || { echo "Build failed. Inspecting logs."; cat /go/sonic/build/logs/* || true; exit 1; }
+RUN make all V=1 || { echo "Build failed. Check verbose output above for details."; exit 1; }
 
 # Debug: List the entire build directory to check for binaries
 RUN ls -lR /go/sonic/build/
@@ -70,12 +73,6 @@ RUN case "${TARGETPLATFORM:-linux/amd64}" in \
         echo "Normalized platform: linux/arm64" \
         && curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-arm64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for arm64 after retries"; exit 1; } \
         && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for arm64"; exit 1; } \
-        && rm go1.24.0.tar.gz \
-        ;; \
-    linux/riscv64*) \
-        echo "Normalized platform: linux/riscv64" \
-        && curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-riscv64.tar.gz -o go1.24.0.tar.gz || { echo "Failed to download Go for riscv64 after retries"; exit 1; } \
-        && tar -C /usr/local -xzf go1.24.0.tar.gz || { echo "Failed to extract Go tarball for riscv64"; exit 1; } \
         && rm go1.24.0.tar.gz \
         ;; \
     *) \
