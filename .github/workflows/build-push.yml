@@ -34,6 +34,10 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'  # Allow the build to continue despite vulnerabilities
           scanners: 'vuln'  # Use Docker for scanning, avoid containerd/podman
+      - name: Clean up existing images
+        run: |
+          docker rmi ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || true
+          docker rmi ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || true
       - name: Debug Package Accessibility
         run: |
           echo "Verifying package accessibility before push..."
@@ -75,6 +79,10 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'  # Allow the build to continue despite vulnerabilities
           scanners: 'vuln'  # Use Docker for scanning, avoid containerd/podman
+      - name: Clean up existing images
+        run: |
+          docker rmi ghcr.io/beaniezombie/zombiekit-devcontainer:amd64 || true
+          docker rmi ghcr.io/beaniezombie/zombiekit-devcontainer:arm64 || true
       - name: Debug Package Accessibility
         run: |
           echo "Verifying package accessibility before push..."
