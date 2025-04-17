@@ -15,9 +15,11 @@ RUN apt-get update && \
     lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
-# Create docker group + runner user
-RUN groupadd docker && \
-    useradd -m -s /bin/bash runner && \
+# Ensure docker group exists
+RUN if ! getent group docker >/dev/null; then groupadd docker; fi
+
+# Create runner user and ensure they belong to docker group
+RUN useradd -m -s /bin/bash runner && \
     usermod -aG sudo runner && \
     usermod -aG docker runner && \
     echo "runner ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner
