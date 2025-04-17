@@ -42,22 +42,22 @@ jobs:
           exit-code: '0'
           scanners: 'vuln'
       - name: Clean up previous image
-        run: docker rmi ${{ env.IMAGE_NAME }}:dev-amd64 || true
+        run: docker rmi ${{ env.IMAGE_NAME }}:temp-amd64 || true
       - name: Build & Push Docker Image (AMD64)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/amd64
-          tags: ${{ env.IMAGE_NAME }}:dev-amd64
+          tags: ${{ env.IMAGE_NAME }}:temp-amd64
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64,mode=max
       - name: Verify Image Push to GHCR
         run: |
           for i in {1..5}; do
-            docker manifest inspect ${{ env.IMAGE_NAME }}:dev-amd64 && break || sleep 5
+            docker manifest inspect ${{ env.IMAGE_NAME }}:temp-amd64 && break || sleep 5
           done || {
-            echo "::error::dev-amd64 not found in GHCR. Check previous step for push failure."; exit 1;
+            echo "::error::temp-amd64 not found in GHCR. Check previous step for push failure."; exit 1;
           }
 
   build-arm64:
@@ -107,22 +107,22 @@ jobs:
           exit-code: '0'
           scanners: 'vuln'
       - name: Clean up previous image
-        run: docker rmi ${{ env.IMAGE_NAME }}:dev-arm64 || true
+        run: docker rmi ${{ env.IMAGE_NAME }}:temp-arm64 || true
       - name: Build & Push Docker Image (ARM64)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/arm64
-          tags: ${{ env.IMAGE_NAME }}:dev-arm64
+          tags: ${{ env.IMAGE_NAME }}:temp-arm64
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64,mode=max
       - name: Verify Image Push to GHCR
         run: |
           for i in {1..5}; do
-            docker manifest inspect ${{ env.IMAGE_NAME }}:dev-arm64 && break || sleep 5
+            docker manifest inspect ${{ env.IMAGE_NAME }}:temp-arm64 && break || sleep 5
           done || {
-            echo "::error::dev-arm64 not found in GHCR. Check previous step for push failure."; exit 1;
+            echo "::error::temp-arm64 not found in GHCR. Check previous step for push failure."; exit 1;
           }
 
   combine-images:
@@ -169,41 +169,41 @@ jobs:
         run: curl -sI https://ghcr.io || exit 1
       - name: Verify Architecture Manifests Exist
         run: |
-          docker manifest inspect ${{ env.IMAGE_NAME }}:dev-amd64 || {
-            echo "::error::Missing dev-amd64 image. Build job may have failed."; exit 1;
+          docker manifest inspect ${{ env.IMAGE_NAME }}:temp-amd64 || {
+            echo "::error::Missing temp-amd64 image. Build job may have failed."; exit 1;
           }
-          docker manifest inspect ${{ env.IMAGE_NAME }}:dev-arm64 || {
-            echo "::error::Missing dev-arm64 image. Build job may have failed."; exit 1;
+          docker manifest inspect ${{ env.IMAGE_NAME }}:temp-arm64 || {
+            echo "::error::Missing temp-arm64 image. Build job may have failed."; exit 1;
           }
       - name: Pull Architecture Images with Retry
         run: |
           for i in {1..5}; do
-            docker pull ${{ env.IMAGE_NAME }}:dev-amd64 && break || sleep 10
+            docker pull ${{ env.IMAGE_NAME }}:temp-amd64 && break || sleep 10
           done || {
-            echo "::error::Failed to pull dev-amd64 after retries. Check build-amd64 logs."; exit 1;
+            echo "::error::Failed to pull temp-amd64 after retries. Check build-amd64 logs."; exit 1;
           }
           for i in {1..5}; do
-            docker pull ${{ env.IMAGE_NAME }}:dev-arm64 && break || sleep 10
+            docker pull ${{ env.IMAGE_NAME }}:temp-arm64 && break || sleep 10
           done || {
-            echo "::error::Failed to pull dev-arm64 after retries. Check build-arm64 logs."; exit 1;
+            echo "::error::Failed to pull temp-arm64 after retries. Check build-arm64 logs."; exit 1;
           }
       - name: Pre-Check Images Exist in GHCR
         run: |
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/manifests/dev-amd64 | jq .mediaType || {
-              echo "::error::Missing dev-amd64 manifest in registry. Build may have failed."; exit 1;
+            https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/manifests/temp-amd64 | jq .mediaType || {
+              echo "::error::Missing temp-amd64 manifest in registry. Build may have failed."; exit 1;
             }
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/manifests/dev-arm64 | jq .mediaType || {
-              echo "::error::Missing dev-arm64 manifest in registry. Build may have failed."; exit 1;
+            https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/manifests/temp-arm64 | jq .mediaType || {
+              echo "::error::Missing temp-arm64 manifest in registry. Build may have failed."; exit 1;
             }
       - name: Verify Architecture Images in GHCR
         run: |
-          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:dev-amd64 || {
-            echo "::error::Failed to verify dev-amd64 image in GHCR."; exit 1;
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:temp-amd64 || {
+            echo "::error::Failed to verify temp-amd64 image in GHCR."; exit 1;
           }
-          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:dev-arm64 || {
-            echo "::error::Failed to verify dev-arm64 image in GHCR."; exit 1;
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:temp-arm64 || {
+            echo "::error::Failed to verify temp-arm64 image in GHCR."; exit 1;
           }
       - name: List Images and Verify Registry State
         run: |
@@ -211,20 +211,16 @@ jobs:
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/tags/list | jq
       - name: Create & Push Multi-Arch Manifest (:dev)
         run: |
-          docker manifest create ${{ env.IMAGE_NAME }}:dev \
-            --amend ${{ env.IMAGE_NAME }}:dev-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:dev-arm64 || exit 1
-          for i in {1..5}; do
-            docker manifest push --purge ${{ env.IMAGE_NAME }}:dev && break || sleep 10
-          done || exit 1
+          docker buildx imagetools create \
+            -t ${{ env.IMAGE_NAME }}:dev \
+            ${{ env.IMAGE_NAME }}:temp-amd64 \
+            ${{ env.IMAGE_NAME }}:temp-arm64 || exit 1
       - name: Create & Push Multi-Arch Manifest (:latest)
         run: |
-          docker manifest create ${{ env.IMAGE_NAME }}:latest \
-            --amend ${{ env.IMAGE_NAME }}:dev-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:dev-arm64 || exit 1
-          for i in {1..5}; do
-            docker manifest push --purge ${{ env.IMAGE_NAME }}:latest && break || sleep 10
-          done || exit 1
+          docker buildx imagetools create \
+            -t ${{ env.IMAGE_NAME }}:latest \
+            ${{ env.IMAGE_NAME }}:temp-amd64 \
+            ${{ env.IMAGE_NAME }}:temp-arm64 || exit 1
       - name: Log Dev Visibility
         run: echo "::notice::Container published publicly as :dev and :latest for testing only – not production ready."
       - name: Ensure Container is Public
