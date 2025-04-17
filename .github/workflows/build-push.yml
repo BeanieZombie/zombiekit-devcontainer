@@ -34,6 +34,8 @@ jobs:
           driver-opts: image=moby/buildkit:latest
           buildkitd-flags: --debug
           name: build-amd64-builder
+      - name: Prune Buildx Builder
+        run: docker buildx prune --force
       - name: Trivy Scan (ubuntu:jammy)
         uses: aquasecurity/trivy-action@master
         with:
@@ -49,7 +51,8 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64
-          tags: ${{ env.IMAGE_NAME }}:temp-amd64
+          tags: ghcr.io/beaniezombie/zombiekit-devcontainer:temp-amd64
+          provenance: false
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64,mode=max
       - name: Verify Image Push to GHCR
@@ -88,6 +91,8 @@ jobs:
           driver-opts: image=moby/buildkit:latest
           buildkitd-flags: --debug
           name: build-arm64-builder
+      - name: Prune Buildx Builder
+        run: docker buildx prune --force
       - name: Set up QEMU with Retry
         run: |
           for i in {1..3}; do
@@ -114,7 +119,8 @@ jobs:
           context: .
           push: true
           platforms: linux/arm64
-          tags: ${{ env.IMAGE_NAME }}:temp-arm64
+          tags: ghcr.io/beaniezombie/zombiekit-devcontainer:temp-arm64
+          provenance: false
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64,mode=max
       - name: Verify Image Push to GHCR
@@ -211,21 +217,25 @@ jobs:
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/tags/list | jq
       - name: Create & Push Multi-Arch Manifest (:dev)
         run: |
-          docker buildx imagetools create \
-            -t ${{ env.IMAGE_NAME }}:dev \
-            ${{ env.IMAGE_NAME }}:temp-amd64 \
-            ${{ env.IMAGE_NAME }}:temp-arm64 || exit 1
+          for i in {1..3}; do
+            docker buildx imagetools create \
+              -t ghcr.io/beaniezombie/zombiekit-devcontainer:dev \
+              ghcr.io/beaniezombie/zombiekit-devcontainer:temp-amd64 \
+              ghcr.io/beaniezombie/zombiekit-devcontainer:temp-arm64 && break || sleep 10
+          done || {
+            echo "::error::Failed to create multi-arch manifest."; exit 1;
+          }
       - name: Create & Push Multi-Arch Manifest (:latest)
         run: |
-          docker buildx imagetools create \
-            -t ${{ env.IMAGE_NAME }}:latest \
-            ${{ env.IMAGE_NAME }}:temp-amd64 \
-            ${{ env.IMAGE_NAME }}:temp-arm64 || exit 1
+          for i in {1..3}; do
+            docker buildx imagetools create \
+              -t ghcr.io/beaniezombie/zombiekit-devcontainer:latest \
+              ghcr.io/beaniezombie/zombiekit-devcontainer:temp-amd64 \
+              ghcr.io/beaniezombie/zombiekit-devcontainer:temp-arm64 && break || sleep 10
+          done || {
+            echo "::error::Failed to create multi-arch manifest."; exit 1;
+          }
       - name: Log Dev Visibility
         run: echo "::notice::Container published publicly as :dev and :latest for testing only – not production ready."
-      - name: Ensure Container is Public
-        run: gh api --method PATCH /user/packages/container/zombiekit-devcontainer/visibility -f visibility=public
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Warn Not Production-Ready
         run: echo "::warning::This image is public for testing and CI workflows only. DO NOT use in production environments."
