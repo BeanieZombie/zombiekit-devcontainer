@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   packages: write
+  actions: read
 env:
   IMAGE_NAME: ghcr.io/beaniezombie/zombiekit-devcontainer
   VERSION: dev
@@ -44,7 +45,7 @@ jobs:
           platforms: linux/amd64
           tags: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64
           cache-from: type=gha
-          cache-to: type=gha,mode=max,key=${{ github.sha }}-amd64
+          cache-to: type=gha,mode=max
       - name: Verify AMD64 Image
         run: docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || exit 1
 
@@ -87,7 +88,7 @@ jobs:
           platforms: linux/arm64
           tags: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
           cache-from: type=gha
-          cache-to: type=gha,mode=max,key=${{ github.sha }}-arm64
+          cache-to: type=gha,mode=max
       - name: Verify ARM64 Image
         run: docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
 
