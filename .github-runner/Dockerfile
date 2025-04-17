@@ -12,14 +12,17 @@ RUN apt-get update && \
     qemu-user-static \
     ca-certificates \
     gnupg \
-    lsb-release \
-    && rm -rf /var/lib/apt/lists/*
+    lsb-release && \
+    rm -rf /var/lib/apt/lists/*
 
-# Ensure docker group exists
-RUN if ! getent group docker >/dev/null; then groupadd docker; fi
+# Install Docker Buildx plugin (ARM64)
+RUN mkdir -p /usr/libexec/docker/cli-plugins && \
+    curl -sSL https://github.com/docker/buildx/releases/download/v0.12.0/buildx-v0.12.0.linux-arm64 -o /usr/libexec/docker/cli-plugins/docker-buildx && \
+    chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
 
-# Create runner user and ensure they belong to docker group
-RUN useradd -m -s /bin/bash runner && \
+# Ensure docker group exists and create runner user with necessary permissions
+RUN if ! getent group docker >/dev/null; then groupadd docker; fi && \
+    useradd -m -s /bin/bash runner && \
     usermod -aG sudo runner && \
     usermod -aG docker runner && \
     echo "runner ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner
