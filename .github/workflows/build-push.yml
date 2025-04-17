@@ -36,7 +36,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
           scanners: 'vuln'
-      - name: Clean up previous image (if exists)
+      - name: Clean up previous image
         run: docker rmi ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || true
       - name: Build & Push Docker Image (AMD64)
         uses: docker/build-push-action@v6
@@ -65,13 +65,25 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Check Docker + Buildx
         run: |
-          docker info || { echo "Docker info failed"; exit 1; }
-          docker buildx version || { echo "Buildx version check failed"; exit 1; }
-          docker buildx inspect || { echo "Buildx inspect failed"; exit 1; }
+          docker info || exit 1
+          docker system info || exit 1
+          df -h || exit 1
+          free -h || exit 1
+          docker buildx version || exit 1
+          docker buildx inspect || exit 1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU with Retry
+        run: |
+          for i in {1..3}; do
+            docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || {
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -eq 125 ]; then
+                break
+              fi
+              sleep 5
+            }
+          done || exit 1
       - name: Trivy Scan (ubuntu:jammy)
         uses: aquasecurity/trivy-action@master
         with:
@@ -79,7 +91,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
           scanners: 'vuln'
-      - name: Clean up previous image (if exists)
+      - name: Clean up previous image
         run: docker rmi ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || true
       - name: Build & Push Docker Image (ARM64)
         uses: docker/build-push-action@v6
@@ -104,59 +116,69 @@ jobs:
       - name: Set up QEMU with Retry
         run: |
           for i in {1..3}; do
-            docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || sleep 10
-          done || { echo "Failed to set up QEMU after retries"; exit 1; }
+            docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || {
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -eq 125 ]; then
+                break
+              fi
+              sleep 5
+            }
+          done || exit 1
       - name: Check Docker Info
         run: |
-          docker info || { echo "Docker info failed"; exit 1; }
-          docker ps -a || { echo "Docker ps failed"; exit 1; }
-          docker images || { echo "Docker images failed"; exit 1; }
-          docker version || { echo "Docker version check failed"; exit 1; }
+          docker info || exit 1
+          docker ps -a || exit 1
+          docker images || exit 1
+          docker version || exit 1
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Ping GHCR
-        run: |
-          ping ghcr.io -c 4 || { echo "Network connectivity issue to ghcr.io"; exit 1; }
+      - name: Check GHCR Availability
+        run: curl -sI https://ghcr.io || exit 1
       - name: Pull Architecture Images with Retry
         run: |
           for i in {1..5}; do
-            docker pull --platform linux/amd64 ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 2>&1 && break || { echo "Retry $i: Failed to pull AMD64 image - $err"; sleep 10; }
-          done || { echo "Failed to pull AMD64 image after retries"; exit 1; }
+            docker pull --platform linux/amd64 ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 2>&1 && break || sleep 10
+          done || exit 1
           for i in {1..5}; do
-            docker pull --platform linux/arm64 ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 2>&1 && break || { echo "Retry $i: Failed to pull ARM64 image - $err"; sleep 10; }
-          done || { echo "Failed to pull ARM64 image after retries"; exit 1; }
+            docker pull --platform linux/arm64 ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 2>&1 && break || sleep 10
+          done || exit 1
+      - name: Confirm Both Architecture Images Exist
+        run: |
+          docker pull ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || exit 1
+          docker pull ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
+      - name: List Images and Verify Registry State
+        run: |
+          docker images
+          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/tags/list | jq
       - name: Verify Architecture Manifests
         run: |
-          docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || { echo "AMD64 image missing"; exit 1; }
-          docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || { echo "ARM64 image missing"; exit 1; }
+          docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || exit 1
+          docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
       - name: Create & Push Multi-Arch Manifest (`:dev`)
         run: |
           docker manifest create ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
             --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || { echo "Manifest creation failed. Check images and tags."; exit 1; }
+            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
           for i in {1..5}; do
             docker manifest push --purge ${{ env.IMAGE_NAME }}:${{ env.VERSION }} && break || sleep 10
-          done || { echo "Manifest push failed after retries."; exit 1; }
+          done || exit 1
       - name: Create & Push Multi-Arch Manifest (`:latest`)
         run: |
           docker manifest create ${{ env.IMAGE_NAME }}:latest \
             --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || { echo "Manifest creation failed for :latest. Check images and tags."; exit 1; }
+            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
           for i in {1..5}; do
             docker manifest push --purge ${{ env.IMAGE_NAME }}:latest && break || sleep 10
-          done || { echo "Manifest push failed for :latest after retries."; exit 1; }
-      - name: Log Dev Visibility (Public Testing Mode)
-        run: |
-          echo "::notice::Container published publicly as :${{ env.VERSION }} and :latest for testing workflows only – not production ready."
-      - name: Ensure Container is Public (Dev Mode)
-        run: gh api --method PATCH /user/packages/container/zombiekit-devcontainer/visibility \
-          -f visibility=public
+          done || exit 1
+      - name: Log Dev Visibility
+        run: echo "::notice::Container published publicly as :${{ env.VERSION }} and :latest for testing only – not production ready."
+      - name: Ensure Container is Public
+        run: gh api --method PATCH /user/packages/container/zombiekit-devcontainer/visibility -f visibility=public
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Warn Not Production-Ready
-        run: |
-          echo "::warning::This image is public for testing and CI workflows only. DO NOT use in production environments."
+        run: echo "::warning::This image is public for testing and CI workflows only. DO NOT use in production environments."
