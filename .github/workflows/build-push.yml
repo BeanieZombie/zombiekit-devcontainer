@@ -29,6 +29,11 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver-opts: image=moby/buildkit:latest
+          buildkitd-flags: --debug
+          name: build-amd64-builder
       - name: Trivy Scan (ubuntu:jammy)
         uses: aquasecurity/trivy-action@master
         with:
@@ -37,18 +42,21 @@ jobs:
           exit-code: '0'
           scanners: 'vuln'
       - name: Clean up previous image
-        run: docker rmi ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || true
+        run: docker rmi ${{ env.IMAGE_NAME }}:dev-amd64 || true
       - name: Build & Push Docker Image (AMD64)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/amd64
-          tags: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64
+          tags: ${{ env.IMAGE_NAME }}:dev-amd64
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64,mode=max
-      - name: Verify AMD64 Image
-        run: docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || exit 1
+      - name: Verify AMD64 Image Push
+        run: |
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:dev-amd64 || {
+            echo "::error::Failed to verify dev-amd64 image in GHCR. Exiting."; exit 1;
+          }
 
   build-arm64:
     if: github.repository == 'BeanieZombie/zombiekit-devcontainer'
@@ -73,6 +81,11 @@ jobs:
           docker buildx inspect || exit 1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver-opts: image=moby/buildkit:latest
+          buildkitd-flags: --debug
+          name: build-arm64-builder
       - name: Set up QEMU with Retry
         run: |
           for i in {1..3}; do
@@ -92,18 +105,21 @@ jobs:
           exit-code: '0'
           scanners: 'vuln'
       - name: Clean up previous image
-        run: docker rmi ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || true
+        run: docker rmi ${{ env.IMAGE_NAME }}:dev-arm64 || true
       - name: Build & Push Docker Image (ARM64)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/arm64
-          tags: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
+          tags: ${{ env.IMAGE_NAME }}:dev-arm64
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64,mode=max
-      - name: Verify ARM64 Image
-        run: docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
+      - name: Verify ARM64 Image Push
+        run: |
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:dev-arm64 || {
+            echo "::error::Failed to verify dev-arm64 image in GHCR. Exiting."; exit 1;
+          }
 
   combine-images:
     needs: [build-amd64, build-arm64]
@@ -111,8 +127,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jq (for debugging)
+        run: sudo apt-get update && sudo apt-get install -y jq
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver-opts: image=moby/buildkit:latest
+          buildkitd-flags: --debug
+          name: combine-images-builder
       - name: Set up QEMU with Retry
         run: |
           for i in {1..3}; do
@@ -138,44 +163,62 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Check GHCR Availability
         run: curl -sI https://ghcr.io || exit 1
+      - name: Verify Architecture Manifests Exist
+        run: |
+          docker manifest inspect ${{ env.IMAGE_NAME }}:dev-amd64 || {
+            echo "::error::Missing dev-amd64 image. Build job may have failed."; exit 1;
+          }
+          docker manifest inspect ${{ env.IMAGE_NAME }}:dev-arm64 || {
+            echo "::error::Missing dev-arm64 image. Build job may have failed."; exit 1;
+          }
       - name: Pull Architecture Images with Retry
         run: |
           for i in {1..5}; do
-            docker pull --platform linux/amd64 ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 2>&1 && break || sleep 10
-          done || exit 1
+            docker pull ${{ env.IMAGE_NAME }}:dev-amd64 && break || sleep 10
+          done || {
+            echo "::error::Failed to pull dev-amd64 after retries."; exit 1;
+          }
           for i in {1..5}; do
-            docker pull --platform linux/arm64 ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 2>&1 && break || sleep 10
-          done || exit 1
-      - name: Confirm Both Architecture Images Exist
+            docker pull ${{ env.IMAGE_NAME }}:dev-arm64 && break || sleep 10
+          done || {
+            echo "::error::Failed to pull dev-arm64 after retries."; exit 1;
+          }
+      - name: Confirm Manifests Exist via GHCR API
         run: |
-          docker pull ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || exit 1
-          docker pull ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
+          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/manifests/dev-amd64 | jq .mediaType || {
+              echo "::error::dev-amd64 manifest not found in registry."; exit 1;
+            }
+          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/manifests/dev-arm64 | jq .mediaType || {
+              echo "::error::dev-arm64 manifest not found in registry."; exit 1;
+            }
       - name: List Images and Verify Registry State
         run: |
           docker images
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://ghcr.io/v2/beaniezombie/zombiekit-devcontainer/tags/list | jq
       - name: Verify Architecture Manifests
         run: |
-          docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 || exit 1
-          docker manifest inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
-      - name: Create & Push Multi-Arch Manifest (`:dev`)
+          docker manifest inspect ${{ env.IMAGE_NAME }}:dev-amd64 || exit 1
+          docker manifest inspect ${{ env.IMAGE_NAME }}:dev-arm64 || exit 1
+      - name: Create & Push Multi-Arch Manifest (:dev)
         run: |
-          docker manifest create ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
+          docker manifest create ${{ env.IMAGE_NAME }}:dev \
+            --amend ${{ env.IMAGE_NAME }}:dev-amd64 \
+            --amend ${{ env.IMAGE_NAME }}:dev-arm64 || exit 1
           for i in {1..5}; do
-            docker manifest push --purge ${{ env.IMAGE_NAME }}:${{ env.VERSION }} && break || sleep 10
+            docker manifest push --purge ${{ env.IMAGE_NAME }}:dev && break || sleep 10
           done || exit 1
-      - name: Create & Push Multi-Arch Manifest (`:latest`)
+      - name: Create & Push Multi-Arch Manifest (:latest)
         run: |
           docker manifest create ${{ env.IMAGE_NAME }}:latest \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 || exit 1
+            --amend ${{ env.IMAGE_NAME }}:dev-amd64 \
+            --amend ${{ env.IMAGE_NAME }}:dev-arm64 || exit 1
           for i in {1..5}; do
             docker manifest push --purge ${{ env.IMAGE_NAME }}:latest && break || sleep 10
           done || exit 1
       - name: Log Dev Visibility
-        run: echo "::notice::Container published publicly as :${{ env.VERSION }} and :latest for testing only – not production ready."
+        run: echo "::notice::Container published publicly as :dev and :latest for testing only – not production ready."
       - name: Ensure Container is Public
         run: gh api --method PATCH /user/packages/container/zombiekit-devcontainer/visibility -f visibility=public
         env:
