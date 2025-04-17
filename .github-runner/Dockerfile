@@ -12,7 +12,9 @@ RUN apt-get update && \
     qemu-user-static \
     ca-certificates \
     gnupg \
-    lsb-release && \
+    lsb-release \
+    inetutils-ping \
+    dnsutils && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Docker Buildx plugin (ARM64)
