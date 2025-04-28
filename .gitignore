@@ -1,6 +1,11 @@
  *.dockerignore
  docker-compose.yml
 
+ # Ignore everything in .zombiekit-cache except the folder itself
+.zombiekit-cache/*
+!.zombiekit-cache/.gitkeep
+
+
  # Editor and IDE files
  .vscode/
  .idea/
