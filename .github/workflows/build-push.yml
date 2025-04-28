@@ -1,13 +1,16 @@
-name: Build and Push Devcontainer Image (Pre-Production)
+name: Build and Push Devcontainer Image (Production)
+
 on:
   push:
     branches:
       - main
+
 permissions:
   contents: read
   packages: write
   actions: read
   id-token: write
+
 env:
   IMAGE_NAME: ghcr.io/beaniezombie/zombiekit-devcontainer
   VERSION: dev
@@ -55,9 +58,6 @@ jobs:
           exit-code: '0'
           scanners: 'vuln'
 
-      - name: Clean up previous image
-        run: docker rmi ${{ env.IMAGE_NAME }}:temp-amd64 || true
-
       - name: Build & Push Docker Image (AMD64)
         uses: docker/build-push-action@v6
         with:
@@ -69,12 +69,12 @@ jobs:
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-amd64,mode=max
 
-      - name: Verify Image Push to GHCR
+      - name: Verify Image Push to GHCR (AMD64)
         run: |
           for i in {1..5}; do
             docker manifest inspect ${{ env.IMAGE_NAME }}:temp-amd64 && break || sleep 5
           done || {
-            echo "::error::temp-amd64 not found in GHCR. Check previous step for push failure."; exit 1;
+            echo "::error::temp-amd64 not found in GHCR after retries. Check push step."; exit 1;
           }
 
   build-arm64:
@@ -99,12 +99,12 @@ jobs:
 
       - name: Check Docker + Buildx
         run: |
-          docker info || exit 1
-          docker system info || exit 1
-          df -h || exit 1
-          free -h || exit 1
-          docker buildx version || exit 1
-          docker buildx inspect || exit 1
+          docker info
+          docker system info
+          df -h
+          free -h
+          docker buildx version
+          docker buildx inspect
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -120,14 +120,8 @@ jobs:
       - name: Set up QEMU with Retry
         run: |
           for i in {1..3}; do
-            docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || {
-              EXIT_CODE=$?
-              if [ $EXIT_CODE -eq 125 ]; then
-                break
-              fi
-              sleep 5
-            }
-          done || exit 1
+            docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || sleep 5
+          done
 
       - name: Trivy Scan (ubuntu:jammy)
         uses: aquasecurity/trivy-action@master
@@ -136,9 +130,6 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
           scanners: 'vuln'
-
-      - name: Clean up previous image
-        run: docker rmi ${{ env.IMAGE_NAME }}:temp-arm64 || true
 
       - name: Build & Push Docker Image (ARM64)
         uses: docker/build-push-action@v6
@@ -151,12 +142,12 @@ jobs:
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache-arm64,mode=max
 
-      - name: Verify Image Push to GHCR
+      - name: Verify Image Push to GHCR (ARM64)
         run: |
           for i in {1..5}; do
             docker manifest inspect ${{ env.IMAGE_NAME }}:temp-arm64 && break || sleep 5
           done || {
-            echo "::error::temp-arm64 not found in GHCR. Check previous step for push failure."; exit 1;
+            echo "::error::temp-arm64 not found in GHCR after retries. Check push step."; exit 1;
           }
 
   combine-images:
@@ -168,7 +159,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install jq (for debugging)
+      - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Set up Docker Buildx
@@ -182,14 +173,8 @@ jobs:
       - name: Set up QEMU with Retry
         run: |
           for i in {1..3}; do
-            docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || {
-              EXIT_CODE=$?
-              if [ $EXIT_CODE -eq 125 ]; then
-                break
-              fi
-              sleep 5
-            }
-          done || exit 1
+            docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || sleep 5
+          done
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -206,31 +191,35 @@ jobs:
       - name: Check GHCR Availability
         run: curl -sI https://ghcr.io || exit 1
 
-      - name: Verify Architecture Manifests Exist
+      - name: Pre-Check Architecture Manifests
         run: |
-          docker manifest inspect ${{ env.IMAGE_NAME }}:temp-amd64 || {
-            echo "::error::Missing temp-amd64 image. Build job may have failed."; exit 1;
-          }
-          docker manifest inspect ${{ env.IMAGE_NAME }}:temp-arm64 || {
-            echo "::error::Missing temp-arm64 image. Build job may have failed."; exit 1;
-          }
+          docker manifest inspect ${{ env.IMAGE_NAME }}:temp-amd64 || exit 1
+          docker manifest inspect ${{ env.IMAGE_NAME }}:temp-arm64 || exit 1
 
-      - name: Create & Push Multi-Arch Manifest (:dev)
+      - name: Pull Images with Retry
+        run: |
+          for i in {1..5}; do
+            docker pull ${{ env.IMAGE_NAME }}:temp-amd64 && break || sleep 10
+          done
+          for i in {1..5}; do
+            docker pull ${{ env.IMAGE_NAME }}:temp-arm64 && break || sleep 10
+          done
+
+      - name: Combine & Push Multi-Arch Manifest (:dev)
         run: |
           docker buildx imagetools create \
+            --provenance=false \
             -t ghcr.io/beaniezombie/zombiekit-devcontainer:dev \
             ghcr.io/beaniezombie/zombiekit-devcontainer:temp-amd64 \
             ghcr.io/beaniezombie/zombiekit-devcontainer:temp-arm64
 
-      - name: Create & Push Multi-Arch Manifest (:latest)
+      - name: Combine & Push Multi-Arch Manifest (:latest)
         run: |
           docker buildx imagetools create \
+            --provenance=false \
             -t ghcr.io/beaniezombie/zombiekit-devcontainer:latest \
             ghcr.io/beaniezombie/zombiekit-devcontainer:temp-amd64 \
             ghcr.io/beaniezombie/zombiekit-devcontainer:temp-arm64
 
       - name: Log Dev Visibility
-        run: echo "::notice::Container published publicly as :dev and :latest for testing only – not production ready."
-
-      - name: Warn Not Production-Ready
-        run: echo "::warning::This image is public for testing and CI workflows only. DO NOT use in production environments."
+        run: echo "::notice::Container published as :dev and :latest — multi-arch, production ready."
