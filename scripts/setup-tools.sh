@@ -2,47 +2,47 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-echo "=== Installing Bun (latest version) ==="
-curl -fsSL https://bun.sh/install | bash || {
-    echo "Error: Failed to download or execute Bun install script"
-    exit 1
-}
+MODE="${1:-user-setup}"
 
-# Ensure Bun's bin is in PATH for future sessions and current shell
-if ! grep -q "\$HOME/.bun/bin" "$HOME/.bashrc"; then
-    echo 'export PATH=$PATH:$HOME/.bun/bin' >> "$HOME/.bashrc"
-fi
-export PATH=$PATH:"$HOME/.bun/bin"
+if [[ "$MODE" == "--root-setup" ]]; then
+    echo "=== [ROOT] Setting up system-wide binaries ==="
 
-# Verify Bun installation
-if ! command -v bun >/dev/null; then
-    echo "Error: Bun installation failed - bun command not found"
-    exit 1
-fi
-echo "✅ Bun version installed: $(bun --version)"
+    # Move Bun to /usr/local/bin if it exists
+    if [[ -f "$HOME/.bun/bin/bun" ]]; then
+        echo "Moving Bun binary to /usr/local/bin"
+        mv "$HOME/.bun/bin/bun" /usr/local/bin/
+        rm -rf "$HOME/.bun"
+    fi
 
-echo "=== Installing Foundry (latest version) ==="
-curl -L https://foundry.paradigm.xyz | bash
-"$HOME/.foundry/bin/foundryup"
+    # Move Foundry binaries to /usr/local/bin if they exist
+    if [[ -d "$HOME/.foundry/bin" ]]; then
+        echo "Moving Foundry binaries to /usr/local/bin"
+        cp "$HOME/.foundry/bin/"* /usr/local/bin/
+        rm -rf "$HOME/.foundry"
+    fi
 
-# Ensure Foundry's bin is in PATH for future sessions and current shell
-if ! grep -q "\$HOME/.foundry/bin" "$HOME/.bashrc"; then
-    echo 'export PATH=$PATH:$HOME/.foundry/bin' >> "$HOME/.bashrc"
-fi
-export PATH=$PATH:"$HOME/.foundry/bin"
-
-# Also create a global profile so new terminals pick up Foundry
-if [ ! -f /etc/profile.d/foundry.sh ]; then
-    echo 'export PATH=$PATH:$HOME/.foundry/bin' | sudo tee /etc/profile.d/foundry.sh > /dev/null
+    echo "✅ System-wide binaries installed."
+    exit 0
 fi
 
-echo 'export PATH=$PATH:$HOME/.foundry/bin' | sudo tee /etc/profile.d/foundry.sh > /dev/null
+if [[ "$MODE" == "--user-setup" ]]; then
+    echo "=== Installing Bun (latest version) ==="
+    curl -fsSL https://bun.sh/install | bash
+    export PATH=$PATH:"$HOME/.bun/bin"
 
-# Verify Foundry installation
-if ! command -v forge >/dev/null; then
-    echo "Error: Foundry installation failed - forge command not found"
-    exit 1
+    echo "✅ Bun installed: $(bun --version)"
+
+    echo "=== Installing Foundry (latest version) ==="
+    curl -L https://foundry.paradigm.xyz | bash
+    "$HOME/.foundry/bin/foundryup"
+
+    export PATH=$PATH:"$HOME/.foundry/bin"
+
+    echo "✅ Forge installed: $(forge --version)"
+
+    echo "=== User Setup Complete ==="
+    exit 0
 fi
-echo "✅ Forge version installed: $(forge --version)"
 
-echo "=== ✅ Installation complete: Bun and Foundry are ready ==="
+echo "❌ Unknown setup mode: $MODE"
+exit 1
