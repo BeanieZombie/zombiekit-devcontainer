@@ -34,21 +34,27 @@ RUN bash -c "set -euo pipefail && \
       *) \
         echo \"Unsupported platform: \${TARGETPLATFORM:-linux/amd64}\" && exit 1 ;; \
     esac"
+
 ENV PATH=$PATH:/usr/local/go/bin
 
 # Create non-root user 'vscode'
 RUN useradd -m -s /bin/bash vscode
 
-# Copy and set permissions for setup script
+# Copy setup script
 COPY scripts/setup-tools.sh /home/vscode/setup-tools.sh
-RUN chown vscode:vscode /home/vscode/setup-tools.sh && chmod +x /home/vscode/setup-tools.sh
+RUN chmod +x /home/vscode/setup-tools.sh
 
-# Switch to user
+# Switch to user context and run user-level setup
 USER vscode
 WORKDIR /home/vscode
+RUN /home/vscode/setup-tools.sh --user-setup
 
-# Run setup script (Bun + Foundry install)
-RUN /home/vscode/setup-tools.sh
+# Switch back to root and run root-level setup
+USER root
+RUN /home/vscode/setup-tools.sh --root-setup
 
-# Healthcheck (placeholder)
+# Cleanup leftover script
+RUN rm -f /home/vscode/setup-tools.sh
+
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 CMD ["bash", "-c", "exit 0"]
