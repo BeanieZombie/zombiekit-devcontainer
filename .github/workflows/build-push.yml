@@ -176,15 +176,13 @@ jobs:
       - name: Combine & Push Multi-Arch Manifest (:dev)
         run: |
           docker buildx imagetools create \
-            --provenance=false \
             -t ${{ env.IMAGE_NAME }}:dev \
             ${{ env.IMAGE_NAME }}:temp-amd64 \
             ${{ env.IMAGE_NAME }}:temp-arm64
-
+      
       - name: Combine & Push Multi-Arch Manifest (:latest)
         run: |
           docker buildx imagetools create \
-            --provenance=false \
             -t ${{ env.IMAGE_NAME }}:latest \
             ${{ env.IMAGE_NAME }}:temp-amd64 \
             ${{ env.IMAGE_NAME }}:temp-arm64
