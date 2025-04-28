@@ -27,3 +27,4 @@
  # GitHub Actions artifacts
  .github/workflows/*.log.DS_Store
 .github/.DS_Store
+.DS_Store

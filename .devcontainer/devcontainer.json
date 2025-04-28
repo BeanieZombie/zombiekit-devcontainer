@@ -1,27 +1,38 @@
 {
-  "name": "Zombie Kit Devcontainer",
-  "image": "ghcr.io/beaniezombie/zombiekit-devcontainer:latest",
-  "customizations": {
-      "vscode": {
-          "settings": {
-              "terminal.integrated.shell.linux": "/bin/bash",
-              "go.toolsManagement.checkForUpdates": "off",
-              "go.useLanguageServer": true,
-              "editor.formatOnSave": true
-          },
-          "extensions": [
-              "golang.go",
-              "juanblanco.solidity",
-              "esbenp.prettier-vscode"
-          ]
+    "name": "Zombie Kit Devcontainer",
+    "image": "ghcr.io/beaniezombie/zombiekit-devcontainer:latest",
+    "workspaceFolder": "/workspaces/zombiekit",
+    "remoteUser": "vscode",
+    "features": {
+      "ghcr.io/devcontainers/features/docker-in-docker:2": {
+        "version": "latest"
       }
-  },
-  "forwardPorts": [3000, 5050, 8545, 8546],
-  "runArgs": [
-      "--memory=8g",
-      "--cpus=2",
+    },
+    "mounts": [
+      "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+      "source=${localWorkspaceFolder}/infra/sonic,target=/workspaces/zombiekit/infra/sonic,type=bind,consistency=cached",
+      "source=${localWorkspaceFolder}/.zombiekit-cache,target=/home/vscode/.cache,type=bind,consistency=cached"
+    ],
+    "customizations": {
+      "vscode": {
+        "settings": {
+          "terminal.integrated.shell.linux": "/bin/bash",
+          "go.toolsManagement.checkForUpdates": "off",
+          "go.useLanguageServer": true,
+          "editor.formatOnSave": true
+        },
+        "extensions": [
+          "golang.go",
+          "juanblanco.solidity",
+          "esbenp.prettier-vscode"
+        ]
+      }
+    },
+    "forwardPorts": [3000, 5050, 8545, 8546],
+    "runArgs": [
+      "--memory=12g",
+      "--cpus=4",
       "--cap-add=SYS_PTRACE"
-  ],
-  "remoteUser": "vscode",
-  "postCreateCommand": "echo 'Run `bash scripts/fetch-genesis.sh` to fetch the Sonic genesis file and prime the database.'"
-}
+    ],
+    "updateRemoteUserUID": true
+  }
