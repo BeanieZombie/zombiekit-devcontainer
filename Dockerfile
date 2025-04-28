@@ -3,14 +3,14 @@ FROM ubuntu:jammy AS base
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl=7.81.0-1ubuntu1.14 \
-    git=1:2.34.1-1ubuntu1.10 \
-    build-essential=12.9ubuntu3 \
-    unzip=6.0-26ubuntu3 \
-    apt-utils=2.35.2ubuntu1.10 \
-    net-tools=1.60+git20181103.0eebece-1ubuntu5 \
-    iputils-ping=3:20211215-1build1 \
-    docker.io=20.10.21-0ubuntu1~22.04.2 \
+    curl \
+    git \
+    build-essential \
+    unzip \
+    apt-utils \
+    net-tools \
+    iputils-ping \
+    docker.io \
     && rm -rf /var/lib/apt/lists/*
 
 
