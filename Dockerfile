@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     net-tools \
     iputils-ping \
-    docker.io \
     && rm -rf /var/lib/apt/lists/*
 
 
