@@ -3,6 +3,7 @@ FROM ubuntu:jammy AS base
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     curl \
     git \
     build-essential \
@@ -10,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     net-tools \
     iputils-ping \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
 
 # Debug: Print TARGETPLATFORM, TARGETARCH, and TARGETVARIANT
 ARG TARGETPLATFORM=linux/amd64
@@ -19,25 +20,23 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 RUN echo "Building for TARGETPLATFORM: ${TARGETPLATFORM}, TARGETARCH: ${TARGETARCH}, TARGETVARIANT: ${TARGETVARIANT}"
 
-# Install Go 1.24
-RUN case "${TARGETPLATFORM:-linux/amd64}" in \
-    linux/amd64*) \
-        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz \
-        && tar -C /usr/local -xzf go1.24.0.tar.gz \
-        && rm go1.24.0.tar.gz \
-        ;; \
-    linux/arm64*) \
-        curl -sSL --retry 3 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-arm64.tar.gz -o go1.24.0.tar.gz \
-        && tar -C /usr/local -xzf go1.24.0.tar.gz \
-        && rm go1.24.0.tar.gz \
-        ;; \
-    *) \
-        echo "Unsupported platform: ${TARGETPLATFORM:-linux/amd64}" && exit 1 \
-        ;; \
+# Install Go 1.24 based on platform
+RUN set -euo pipefail && \
+    case "${TARGETPLATFORM:-linux/amd64}" in \
+      linux/amd64*) \
+        curl -sSL --retry 5 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz && \
+        tar -C /usr/local -xzf go1.24.0.tar.gz && \
+        rm go1.24.0.tar.gz ;; \
+      linux/arm64*) \
+        curl -sSL --retry 5 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-arm64.tar.gz -o go1.24.0.tar.gz && \
+        tar -C /usr/local -xzf go1.24.0.tar.gz && \
+        rm go1.24.0.tar.gz ;; \
+      *) \
+        echo "Unsupported platform: ${TARGETPLATFORM:-linux/amd64}" && exit 1 ;; \
     esac
 ENV PATH=$PATH:/usr/local/go/bin
 
-# Create non-root user vscode
+# Create non-root user 'vscode'
 RUN useradd -m -s /bin/bash vscode
 
 # Copy and set permissions for setup script
@@ -47,8 +46,8 @@ RUN chown vscode:vscode /home/vscode/setup-tools.sh && chmod +x /home/vscode/set
 USER vscode
 WORKDIR /home/vscode
 
-# Run setup script
+# Run setup script (Bun + Foundry install)
 RUN /home/vscode/setup-tools.sh
 
-# Healthcheck
+# Healthcheck (placeholder, container always 'healthy' for now)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 CMD ["bash", "-c", "exit 0"]
