@@ -21,8 +21,8 @@ ARG TARGETVARIANT
 RUN echo "Building for TARGETPLATFORM: ${TARGETPLATFORM}, TARGETARCH: ${TARGETARCH}, TARGETVARIANT: ${TARGETVARIANT}"
 
 # Install Go 1.24 based on platform
-RUN set -euo pipefail && \
-    case "${TARGETPLATFORM:-linux/amd64}" in \
+RUN bash -c "set -euo pipefail && \
+    case \"${TARGETPLATFORM:-linux/amd64}\" in \
       linux/amd64*) \
         curl -sSL --retry 5 --retry-delay 5 https://go.dev/dl/go1.24.0.linux-amd64.tar.gz -o go1.24.0.tar.gz && \
         tar -C /usr/local -xzf go1.24.0.tar.gz && \
@@ -32,8 +32,8 @@ RUN set -euo pipefail && \
         tar -C /usr/local -xzf go1.24.0.tar.gz && \
         rm go1.24.0.tar.gz ;; \
       *) \
-        echo "Unsupported platform: ${TARGETPLATFORM:-linux/amd64}" && exit 1 ;; \
-    esac
+        echo \"Unsupported platform: \${TARGETPLATFORM:-linux/amd64}\" && exit 1 ;; \
+    esac"
 ENV PATH=$PATH:/usr/local/go/bin
 
 # Create non-root user 'vscode'
@@ -43,11 +43,12 @@ RUN useradd -m -s /bin/bash vscode
 COPY scripts/setup-tools.sh /home/vscode/setup-tools.sh
 RUN chown vscode:vscode /home/vscode/setup-tools.sh && chmod +x /home/vscode/setup-tools.sh
 
+# Switch to user
 USER vscode
 WORKDIR /home/vscode
 
 # Run setup script (Bun + Foundry install)
 RUN /home/vscode/setup-tools.sh
 
-# Healthcheck (placeholder, container always 'healthy' for now)
+# Healthcheck (placeholder)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 CMD ["bash", "-c", "exit 0"]
