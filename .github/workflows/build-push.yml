@@ -8,8 +8,8 @@ on:
 permissions:
   contents: read
   packages: write
-  actions: read
   id-token: write
+  actions: read
 
 env:
   IMAGE_NAME: ghcr.io/beaniezombie/zombiekit-devcontainer
@@ -24,17 +24,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to GHCR
+      - name: Log in to GHCR (OIDC)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Docker to skip credential helpers
-        run: |
-          mkdir -p ~/.docker
-          echo '{"credsStore":""}' > ~/.docker/config.json
+          oidc: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -85,17 +79,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to GHCR
+      - name: Log in to GHCR (OIDC)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Docker to skip credential helpers
-        run: |
-          mkdir -p ~/.docker
-          echo '{"credsStore":""}' > ~/.docker/config.json
+          oidc: true
 
       - name: Check Docker + Buildx
         run: |
@@ -176,17 +164,11 @@ jobs:
             docker run --rm --privileged tonistiigi/binfmt:latest --install all && break || sleep 5
           done
 
-      - name: Log in to GHCR
+      - name: Log in to GHCR (OIDC)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Docker to skip credential helpers
-        run: |
-          mkdir -p ~/.docker
-          echo '{"credsStore":""}' > ~/.docker/config.json
+          oidc: true
 
       - name: Check GHCR Availability
         run: curl -sI https://ghcr.io || exit 1
